@@ -74,21 +74,35 @@ export function boardReducer(state, action) {
       return { ...state, cards: updatedCards };
     }
 
-    case ACTION_TYPES.MOVE_CARD: {
-      const { cardId, sourceListId, targetListId, newIndex } = action.payload;
-      // Remove from source
-      const cards = state.cards.filter(card => !(card.id === cardId && card.listId === sourceListId));
-      // Add to target (simplified; full DnD logic in component)
-      const movedCard = state.cards.find(c => c.id === cardId);
-      if (!movedCard) return state;
-      cards.push({
-        ...movedCard,
-        listId: targetListId,
-        version: movedCard.version + 1,
-        lastModifiedAt: now(),
-      });
-      return { ...state, cards };
-    }
+    // src/context/boardReducer.js
+case ACTION_TYPES.MOVE_CARD: {
+  const { cardId, originalListId, targetListId, targetIndex } = action.payload;
+
+  // Remove card from original list
+  const cardsWithoutCard = state.cards.filter(
+    card => !(card.id === cardId && card.listId === originalListId)
+  );
+
+  // Find the card
+  const cardToMove = state.cards.find(
+    card => card.id === cardId && card.listId === originalListId
+  );
+
+  if (!cardToMove) return state;
+
+  // Insert into target list at targetIndex
+  const newCard = {
+    ...cardToMove,
+    listId: targetListId,
+    version: cardToMove.version + 1,
+    lastModifiedAt: now(),
+  };
+
+  const updatedCards = [...cardsWithoutCard];
+  updatedCards.splice(targetIndex, 0, newCard);
+
+  return { ...state, cards: updatedCards };
+}
 
     case ACTION_TYPES.DELETE_CARD: {
       return {
