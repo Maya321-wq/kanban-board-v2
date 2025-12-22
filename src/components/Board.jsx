@@ -1,18 +1,27 @@
 import React, { useCallback } from 'react';
-import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { 
+  DndContext, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  closestCorners,
+} from '@dnd-kit/core';
 import ListColumn from './ListColumn';
 import { useBoardState } from '../hooks/useBoardState';
 
+// Strict UUID pattern
+const UUID_PATTERN = '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}';
+const CARD_ID_REGEX = new RegExp(`^card-(${UUID_PATTERN})-list-(${UUID_PATTERN})$`);
 
 export default function Board() {
   const { state, moveCard, addList } = useBoardState();
   const activeLists = state.lists.filter(list => !list.archived);
 
-  // Configure sensors for accessibility (keyboard + pointer)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Prevents accidental drags
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor)
@@ -20,22 +29,47 @@ export default function Board() {
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
-    if (!over) return;
+    
+    if (!over) {
+      console.log('❌ No drop target');
+      return;
+    }
 
-    // Parse IDs: active.id format is "card-{cardId}-{listId}"
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // Extract card and list IDs
-    const cardIdMatch = activeId.match(/^card-(.+)-(.+)$/);
-    if (!cardIdMatch) return;
+    console.log('🎯 Drag ended:', { activeId, overId });
 
-    const [, cardId, sourceListId] = cardIdMatch;
-    const targetListId = overId.startsWith('list-') ? overId : sourceListId;
+    const activeMatch = activeId.match(CARD_ID_REGEX);
+    if (!activeMatch) {
+      console.warn('❌ Invalid source card ID format:', activeId);
+      return;
+    }
 
-    // Only move if actually changing lists
+    const [, cardId, sourceListId] = activeMatch;
+    console.log('🔍 Extracted:', { cardId, sourceListId });
+
+    let targetListId;
+    if (overId.startsWith('card-')) {
+      const overMatch = overId.match(CARD_ID_REGEX);
+      if (!overMatch) {
+        console.warn('❌ Invalid target card ID:', overId);
+        return;
+      }
+      targetListId = overMatch[2];
+    } else {
+      // Dropped directly on a list (overId is list.id)
+      targetListId = overId;
+    }
+
+    console.log('📦 Moving:', { cardId, sourceListId, targetListId });
+
     if (sourceListId !== targetListId) {
+      console.log('🚀 Calling moveCard...');
       moveCard({ cardId, sourceListId, targetListId });
+      console.log('✅ Move dispatched!');
+    } else {
+      console.log('ℹ️ Same list, no move');
     }
   }, [moveCard]);
 
