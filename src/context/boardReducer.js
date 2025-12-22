@@ -1,20 +1,38 @@
 // src/context/boardReducer.js
 import { v4 as uuidv4 } from 'uuid';
 
-// Helper to get current timestamp
 const now = () => Date.now();
 
-// Initial state (required for offline-first)
 export const initialState = {
   lists: [
-    { id: 'list-todo', title: 'To Do', order: 0, archived: false, version: 1, lastModifiedAt: now() },
-    { id: 'list-progress', title: 'In Progress', order: 1, archived: false, version: 1, lastModifiedAt: now() },
-    { id: 'list-done', title: 'Done', order: 2, archived: false, version: 1, lastModifiedAt: now() },
+    { 
+      id: 'list-todo', 
+      title: 'To Do', 
+      order: 0, 
+      archived: false, 
+      version: 1, 
+      lastModifiedAt: now() 
+    },
+    { 
+      id: 'list-progress', 
+      title: 'In Progress', 
+      order: 1, 
+      archived: false, 
+      version: 1, 
+      lastModifiedAt: now() 
+    },
+    { 
+      id: 'list-done', 
+      title: 'Done', 
+      order: 2, 
+      archived: false, 
+      version: 1, 
+      lastModifiedAt: now() 
+    },
   ],
   cards: [],
 };
 
-// Action types (use constants for safety)
 export const ACTION_TYPES = {
   ADD_LIST: 'ADD_LIST',
   ADD_CARD: 'ADD_CARD',
@@ -23,9 +41,10 @@ export const ACTION_TYPES = {
   DELETE_CARD: 'DELETE_CARD',
   RENAME_LIST: 'RENAME_LIST',
   ARCHIVE_LIST: 'ARCHIVE_LIST',
+  RESTORE_LIST: 'RESTORE_LIST',
+  RESTORE_CARD: 'RESTORE_CARD',
 };
 
-// Reducer function
 export function boardReducer(state, action) {
   switch (action.type) {
     case ACTION_TYPES.ADD_LIST: {
@@ -37,10 +56,7 @@ export function boardReducer(state, action) {
         version: 1,
         lastModifiedAt: now(),
       };
-      return {
-        ...state,
-        lists: [...state.lists, newList],
-      };
+      return { ...state, lists: [...state.lists, newList] };
     }
 
     case ACTION_TYPES.ADD_CARD: {
@@ -53,61 +69,56 @@ export function boardReducer(state, action) {
         version: 1,
         lastModifiedAt: now(),
       };
-      return {
-        ...state,
-        cards: [...state.cards, newCard],
-      };
+      console.log('✅ Card added:', newCard.title, 'to list:', newCard.listId);
+      return { ...state, cards: [...state.cards, newCard] };
     }
 
     case ACTION_TYPES.UPDATE_CARD: {
       const { id, updates } = action.payload;
       const updatedCards = state.cards.map(card =>
         card.id === id
-          ? {
-              ...card,
-              ...updates,
-              version: card.version + 1,
-              lastModifiedAt: now(),
-            }
+          ? { ...card, ...updates, version: card.version + 1, lastModifiedAt: now() }
           : card
       );
       return { ...state, cards: updatedCards };
     }
 
-    // src/context/boardReducer.js
-case ACTION_TYPES.MOVE_CARD: {
-  const { cardId, originalListId, targetListId, targetIndex } = action.payload;
-
-  // Remove card from original list
-  const cardsWithoutCard = state.cards.filter(
-    card => !(card.id === cardId && card.listId === originalListId)
-  );
-
-  // Find the card
-  const cardToMove = state.cards.find(
-    card => card.id === cardId && card.listId === originalListId
-  );
-
-  if (!cardToMove) return state;
-
-  // Insert into target list at targetIndex
-  const newCard = {
-    ...cardToMove,
-    listId: targetListId,
-    version: cardToMove.version + 1,
-    lastModifiedAt: now(),
-  };
-
-  const updatedCards = [...cardsWithoutCard];
-  updatedCards.splice(targetIndex, 0, newCard);
-
-  return { ...state, cards: updatedCards };
-}
+    case ACTION_TYPES.MOVE_CARD: {
+      const { cardId, sourceListId, targetListId } = action.payload;
+      
+      console.log('🔄 MOVE_CARD reducer:', { cardId, sourceListId, targetListId });
+      
+      // Find the card to move
+      const cardToMove = state.cards.find(card => card.id === cardId);
+      
+      if (!cardToMove) {
+        console.warn('❌ Card not found:', cardId);
+        return state;
+      }
+      
+      console.log('📦 Found card:', cardToMove.title, 'currently in:', cardToMove.listId);
+      
+      // Update the card's listId
+      const updatedCards = state.cards.map(card =>
+        card.id === cardId
+          ? { 
+              ...card, 
+              listId: targetListId,
+              version: card.version + 1,
+              lastModifiedAt: now() 
+            }
+          : card
+      );
+      
+      console.log('✅ Card moved to:', targetListId);
+      
+      return { ...state, cards: updatedCards };
+    }
 
     case ACTION_TYPES.DELETE_CARD: {
-      return {
-        ...state,
-        cards: state.cards.filter(card => card.id !== action.payload.id),
+      return { 
+        ...state, 
+        cards: state.cards.filter(card => card.id !== action.payload.id) 
       };
     }
 
@@ -128,8 +139,21 @@ case ACTION_TYPES.MOVE_CARD: {
           ? { ...list, archived: true, version: list.version + 1, lastModifiedAt: now() }
           : list
       );
-      // Optionally archive or delete cards (assignment says "archive lists")
       return { ...state, lists: updatedLists };
+    }
+
+    case ACTION_TYPES.RESTORE_LIST: {
+      const list = action.payload;
+      const exists = state.lists.find(l => l.id === list.id);
+      if (exists) return state;
+      return { ...state, lists: [...state.lists, list] };
+    }
+
+    case ACTION_TYPES.RESTORE_CARD: {
+      const card = action.payload;
+      const exists = state.cards.find(c => c.id === card.id);
+      if (exists) return state;
+      return { ...state, cards: [...state.cards, card] };
     }
 
     default:
