@@ -49,7 +49,8 @@ const Card = React.memo(function Card({ card, listId }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-blue-200 ${
+      data-testid="card-item"
+      className={`card-item bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-blue-200 ${
         isDragging ? 'cursor-grabbing shadow-2xl scale-105' : 'cursor-grab'
       }`}
     >

@@ -10,3 +10,10 @@ Component hierarchy and responsibilities:
 Data flow is unidirectional: components call `useBoardState` helpers → helpers dispatch typed actions → reducer updates state → `BoardProvider` persists state to localStorage with a debounce to avoid frequent writes (see `src/context/BoardProvider.jsx` lines ~36–43). `useOfflineSync` (see `src/hooks/useOfflineSync.js` lines ~19–27 and the online handler at ~56) handles background syncing, keeping UI fast and optimistic.
 
 Folder structure follows separation of concerns: `components/`, `hooks/`, `context/`, `services/`, and `tests/`. This makes unit-testing hooks/components straightforward and keeps side-effect code central and testable.
+
+Performance considerations
+
+- Seeding: a script `scripts/seed-data.js` generates 500+ realistic cards and writes `public/seed-state.js` so the app can be loaded with `?seed=true` for profiling and load testing.
+- Virtualization: `ListColumn.jsx` uses `react-window` to virtualize lists with more than 30 cards to keep scroll and paint performance smooth.
+- Memoization: critical per-list computations use `useMemo`, handlers use `useCallback`, and heavy leaf components (e.g., `Card`, `ListColumn`) are wrapped with `React.memo`.
+- Trace collection: `scripts/collect-trace.js` automates trace capture (Playwright) and saves a Chrome performance trace into `docs/profiles/` for analysis and verification.

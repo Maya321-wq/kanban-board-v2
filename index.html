@@ -10,5 +10,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Dev helper: if the URL includes ?seed=true, load /seed-state.js to populate localStorage
+      if (location.search.includes('seed=true')) {
+        const s = document.createElement('script');
+        s.src = '/seed-state.js';
+        document.head.appendChild(s);
+      }
+    </script>
   </body>
 </html>

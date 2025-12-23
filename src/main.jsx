@@ -73,6 +73,30 @@ async function enableMocking() {
 }
 
 enableMocking().then(() => {
-  const root = createRoot(document.getElementById('root'));
-  root.render(<App />);
+  // If ?seed=true is present, load the generated /seed-state.js to populate localStorage
+  const params = new URLSearchParams(window.location.search);
+  const seedFlag = params.get('seed');
+
+  const renderApp = () => {
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  };
+
+  if (seedFlag === 'true') {
+    // Load /seed-state.js and wait for it to execute, then render
+    const script = document.createElement('script');
+    script.src = '/seed-state.js';
+    script.async = true;
+    script.onload = () => {
+      console.log('✅ Seed script loaded. Rendering app with seeded state.');
+      renderApp();
+    };
+    script.onerror = (e) => {
+      console.warn('⚠️ Failed to load seed-state.js:', e, 'Rendering app without seeded state.');
+      renderApp();
+    };
+    document.head.appendChild(script);
+  } else {
+    renderApp();
+  }
 });

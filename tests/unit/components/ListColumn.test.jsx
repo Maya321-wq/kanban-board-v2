@@ -7,6 +7,18 @@ vi.mock('../../../src/hooks/useBoardState', () => ({
   useBoardState: vi.fn(),
 }));
 
+// Partially mock react-window so virtualization renders in JSDOM tests
+vi.mock('react-window', async (importOriginal) => {
+  const actual = await importOriginal();
+  const MockList = ({ children }) => <div role="list">{children}</div>;
+  return {
+    ...actual,
+    FixedSizeList: MockList,
+    // Also export `List` in case the compiled import expects it
+    List: MockList,
+  };
+});
+
 import { useBoardState } from '../../../src/hooks/useBoardState';
 import ListColumn from '../../../src/components/ListColumn';
 
@@ -45,5 +57,17 @@ describe('ListColumn', () => {
     expect(promptSpy).toHaveBeenCalled();
     expect(mockAddCard).toHaveBeenCalledWith({ listId: 'list-1', title: 'New Card' });
     promptSpy.mockRestore();
+  });
+
+  it('uses virtualization when list has more than 30 cards', () => {
+    // build 100 cards for the list
+    const cards = Array.from({ length: 100 }).map((_, i) => ({ id: `c${i}`, listId: 'list-1', title: `T${i}` }));
+    useBoardState.mockReturnValue({ state: { cards }, addCard: mockAddCard, renameList: mockRename, archiveList: mockArchive });
+
+    render(<ListColumn list={{ id: 'list-1', title: 'Test List' }} />);
+
+    // react-window renders an element with role="list" for the outer container
+    const virtual = document.querySelector('[role="list"]');
+    expect(virtual).toBeTruthy();
   });
 });

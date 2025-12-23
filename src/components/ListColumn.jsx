@@ -1,15 +1,19 @@
-import React, { useCallback, memo } from 'react';
+import React, { useCallback, memo, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import Card from './Card';
 import { useBoardState } from '../hooks/useBoardState';
+// react-window exports the fixed-size list as `List`
+import { List } from 'react-window';
 
 const ListColumn = memo(function ListColumn({ list }) {
   const { state, addCard, renameList, archiveList } = useBoardState();
-  const cards = state.cards.filter(c => c.listId === list.id);
+
+  // Memoize cards for this list to avoid re-filtering on unrelated updates
+  const cards = useMemo(() => state.cards.filter(c => c.listId === list.id), [state.cards, list.id]);
 
   // ✅ CRITICAL: Use consistent ID format with "-list-" delimiter
-  const cardIds = cards.map(c => `card-${c.id}-list-${list.id}`);
+  const cardIds = useMemo(() => cards.map(c => `card-${c.id}-list-${list.id}`), [cards, list.id]);
 
   const { setNodeRef, isOver } = useDroppable({ id: list.id });
 
@@ -26,6 +30,25 @@ const ListColumn = memo(function ListColumn({ list }) {
   const handleArchive = useCallback(() => {
     if (window.confirm(`Archive list "${list.title}"?`)) archiveList(list.id);
   }, [archiveList, list.id]);
+
+  // Virtualization: use react-window when list is large
+  const shouldVirtualize = cards.length > 30;
+  const itemSize = 104; // px per card (approx)
+  const listHeight = Math.min(cards.length * itemSize, 640);
+
+  const Row = ({ index, style }) => {
+    const card = cards[index];
+    return (
+      <div style={style}>
+        <Card 
+          key={card.id}
+          card={card}
+          listId={list.id}
+          draggableId={`card-${card.id}-list-${list.id}`}
+        />
+      </div>
+    );
+  };
 
   return (
     <div
@@ -48,19 +71,35 @@ const ListColumn = memo(function ListColumn({ list }) {
       </div>
 
       <div
-        className={`flex-1 overflow-y-auto p-3 space-y-3 transition-all duration-200 
+        className={`flex-1 transition-all duration-200 
         ${isOver ? 'bg-blue-50/40' : 'bg-gradient-to-b from-gray-50/50 to-transparent'}`}
       >
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {cards.map(card => (
-            // ✅ Pass the full draggable ID to Card
-            <Card 
-              key={card.id} 
-              card={card} 
-              listId={list.id} 
-              draggableId={`card-${card.id}-list-${list.id}`} 
-            />
-          ))}
+          {shouldVirtualize ? (
+            <List
+              height={listHeight}
+              itemCount={cards.length}
+              itemSize={itemSize}
+              // Use a numeric width so react-window works in JSDOM tests; this matches the
+              // visual column width (~w-72) used in the layout.
+              width={272}
+              itemKey={index => cards[index].id}
+            >
+              {Row}
+            </List>
+          ) : (
+            <div className="overflow-y-auto p-3 space-y-3">
+              {cards.map(card => (
+                // ✅ Pass the full draggable ID to Card
+                <Card 
+                  key={card.id} 
+                  card={card} 
+                  listId={list.id} 
+                  draggableId={`card-${card.id}-list-${list.id}`} 
+                />
+              ))}
+            </div>
+          )}
         </SortableContext>
 
         {cards.length === 0 && !isOver && <div className="text-center py-8 text-gray-400 text-sm">No cards yet</div>}

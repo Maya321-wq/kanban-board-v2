@@ -11,7 +11,8 @@
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "e2e": "playwright test",
-    "seed": "node scripts/seed-data.js"
+    "seed": "node scripts/seed-data.js",
+    "collect:trace": "node scripts/collect-trace.js"
   },
   "dependencies": {
     "@axe-core/react": "^4.11.0",

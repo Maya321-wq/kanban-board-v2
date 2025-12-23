@@ -14,3 +14,12 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Performance testing
+
+- Seed a large dataset: `npm run seed` (default 500). To generate a different size: `npm run seed -- 800`.
+- Start dev server: `npm run dev`.
+- Load the seeded dataset by opening `http://localhost:5173/?seed=true`.
+- Capture a trace automatically: `npm run collect:trace` (writes JSON to `docs/profiles/`).
+- Manual profiling: use Chrome DevTools Performance or React Profiler and save exports into `docs/profiles/`.
+

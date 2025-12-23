@@ -10,9 +10,8 @@ import {
 import ListColumn from './ListColumn';
 import { useBoardState } from '../hooks/useBoardState';
 
-// Strict UUID pattern
-const UUID_PATTERN = '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}';
-const CARD_ID_REGEX = new RegExp(`^card-(${UUID_PATTERN})-list-(${UUID_PATTERN})$`);
+import { parseDraggableId } from '../utils/dnd';
+
 
 export default function Board() {
   const { state, moveCard, addList } = useBoardState();
@@ -40,23 +39,23 @@ export default function Board() {
 
     console.log('🎯 Drag ended:', { activeId, overId });
 
-    const activeMatch = activeId.match(CARD_ID_REGEX);
-    if (!activeMatch) {
+    const parsedActive = parseDraggableId(activeId);
+    if (!parsedActive) {
       console.warn('❌ Invalid source card ID format:', activeId);
       return;
     }
 
-    const [, cardId, sourceListId] = activeMatch;
+    const { cardId, listId: sourceListId } = parsedActive;
     console.log('🔍 Extracted:', { cardId, sourceListId });
 
     let targetListId;
     if (overId.startsWith('card-')) {
-      const overMatch = overId.match(CARD_ID_REGEX);
-      if (!overMatch) {
+      const parsedOver = parseDraggableId(overId);
+      if (!parsedOver) {
         console.warn('❌ Invalid target card ID:', overId);
         return;
       }
-      targetListId = overMatch[2];
+      targetListId = parsedOver.listId;
     } else {
       // Dropped directly on a list (overId is list.id)
       targetListId = overId;
